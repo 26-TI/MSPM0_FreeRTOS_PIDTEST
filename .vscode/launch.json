@@ -25,7 +25,7 @@
       "request": "launch",
       "name": "jlink-debug",
       "servertype": "jlink",
-      "interface": "swd", // 改成jtag也可以
+      "interface": "swd", 
       // 这个是根据主文件名 作为名字 ${workspaceFolderBasename}
       "executable": "build/${workspaceFolderBasename}.elf",
       "runToEntryPoint": "main",
