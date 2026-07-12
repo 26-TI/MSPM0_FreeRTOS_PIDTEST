@@ -43,11 +43,13 @@ set(MSPM0_SDK_PATH  D:\\Users\\admin\\Desktop\\work\\Toolchain\\ti\\mspm0_sdk_2_
 set(MSPM0_SDK_PATH  /home/rh/ti/mspm0_sdk_2_10_00_04)
 ```
 
-同时，如果要打开syscfg配置引脚，需要把那个文件拖拽到`TI syscfg`的上面打开
+同时，如果要打开syscfg配置引脚，需要把那个文件拖拽到`TI syscfg`图标的上面打开
 
 拿到一个新工程，或者转移了文件路径，要删掉vscode中原有的build目录，重新配置生成cmake，工具链选择arm_gcc，配置和编译应该都会成功
 
 在user文件夹下，对应文件夹中的文件，会自动添加头文件和源文件，可以直接编译
+
+已知bug：windows下需要改成使用ninja编译，默认不是ninja，需要稍微修改
 
 ## 编译烧录调试
 
