@@ -5,9 +5,8 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "semphr.h"
 
-#include "bsp_usart.hpp"
+#include "bsp_uart.hpp"
 
 
 #endif // __MAIN_HPP__

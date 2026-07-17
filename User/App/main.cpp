@@ -1,118 +1,22 @@
 /**
  * @file main.cpp
- * @brief DMA 串口回环 — 流缓冲区 + 双 DMA 全中断
+ * @brief DMA 串口回环 — 使用 BspUart 类
  */
 
 #include "main.hpp"
-#include "stream_buffer.h"
-#include <string.h>
 
-#define CHUNK 256U
-#define STREAM 1024U
-
-static StreamBufferHandle_t g_rx_stream, g_tx_stream;
-static volatile uint8_t     g_rx_byte __attribute__((aligned(4)));
-static uint8_t              g_tx_buf[CHUNK] __attribute__((aligned(4)));
-
-/* ========================================================================== */
-extern "C" void UART0_IRQHandler(void)
-{
-  DL_UART_IIDX iidx  = DL_UART_Main_getPendingInterrupt(UART0_INST);
-  BaseType_t   woken = pdFALSE;
-  size_t       n;
-
-  switch (iidx)
-  {
-    case DL_UART_MAIN_IIDX_DMA_DONE_RX:
-      xStreamBufferSendFromISR(g_rx_stream, (void *)&g_rx_byte, 1, &woken);
-      DL_DMA_disableChannel(DMA, DMA_CH1_CHAN_ID);
-      DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&g_rx_byte);
-      DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, 1);
-      DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);
-      break;
-
-    case DL_UART_MAIN_IIDX_DMA_DONE_TX:
-      n = xStreamBufferReceiveFromISR(g_tx_stream, g_tx_buf, CHUNK, &woken);
-      if (n)
-      {
-        DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
-        DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)g_tx_buf);
-        DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, n);
-        DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
-      }
-      break;
-
-    default:
-      break;
-  }
-  portYIELD_FROM_ISR(woken);
-}
-
-/* ========================================================================== */
-extern "C" void DMA_IRQHandler(void)
-{
-}
-
-static void init(void)
-{
-  g_rx_stream = xStreamBufferCreate(STREAM, 1);
-  g_tx_stream = xStreamBufferCreate(STREAM, 1);
-  NVIC_EnableIRQ(UART0_INT_IRQn);
-
-  /* FIFO 开启但阈值=1 entry：有 1 字节就触发 DMA，无卡顿 */
-  DL_UART_Main_enableFIFOs(UART0_INST);
-  DL_UART_Main_setRXFIFOThreshold(UART0_INST,
-                                  DL_UART_RX_FIFO_LEVEL_ONE_ENTRY);
-
-  /* DMA CH1 (RX): 固定目的地址，每次收 1 字节 */
-  DL_DMA_disableChannel(DMA, DMA_CH1_CHAN_ID);
-  DL_DMA_setSrcAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&(UART0->RXDATA));
-  DL_DMA_setDestAddr(DMA, DMA_CH1_CHAN_ID, (uint32_t)&g_rx_byte);
-  DL_DMA_setTransferSize(DMA, DMA_CH1_CHAN_ID, 1);
-  DL_DMA_enableChannel(DMA, DMA_CH1_CHAN_ID);
-
-  /* DMA CH0 (TX): 发送时由 ISR / kickoff 启动 */
-  DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)g_tx_buf);
-  DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)&(UART0->TXDATA));
-}
-
-static void tx_kickoff(void)
-{
-  if (DL_DMA_isChannelEnabled(DMA, DMA_CH0_CHAN_ID))
-    return;
-  size_t n = xStreamBufferReceive(g_tx_stream, g_tx_buf, CHUNK, 0);
-  if (n)
-  {
-    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID);
-    DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)g_tx_buf);
-    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, n);
-    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID);
-  }
-}
+/* ---- 全局 UART0 实例 ---- */
+static BspUart<64> bsp_uart0;
 
 /* ========================================================================== */
 extern "C" void dmaLoopbackTask(void *arg)
 {
-  uint8_t  buf[CHUNK];
-  uint16_t total = 0;
+  uint8_t  buf[64];
 
   while (1)
   {
-    size_t n = xStreamBufferReceive(g_rx_stream, &buf[total],
-                                    CHUNK - total, pdMS_TO_TICKS(2));
-    if (n)
-    {
-      total += n;
-      if (total < CHUNK)
-        continue;
-    }
-
-    if (total)
-    {
-      xStreamBufferSend(g_tx_stream, buf, total, portMAX_DELAY);
-      tx_kickoff();
-      total = 0;
-    }
+    size_t n = bsp_uart0.receive(&buf[0], 64, portMAX_DELAY);
+    bsp_uart0.send(buf, n);
   }
 }
 
@@ -122,14 +26,23 @@ extern "C" void blinkTask(void *arg)
   while (1)
   {
     DL_GPIO_togglePins(GPIOB, DL_GPIO_PIN_22);
-    vTaskDelay(500);
+    vTaskDelay(pdMS_TO_TICKS(500));
   }
 }
 
 int main()
 {
   SYSCFG_DL_init();
-  init();
+
+  bsp_uart0.init({
+    .uart           = UART0,
+    .irq            = UART0_INT_IRQn,
+    .dma_rx_chan    = DMA_CH1_CHAN_ID,
+    .dma_tx_chan    = DMA_CH0_CHAN_ID,
+    .dma_rx_trigger = UART0_INST_DMA_TRIGGER_0,
+    .dma_tx_trigger = UART0_INST_DMA_TRIGGER_1,
+  });
+
   TaskHandle_t h1, h2;
   xTaskCreate(blinkTask, "blink", 0x80, NULL, configMAX_PRIORITIES - 1, &h1);
   xTaskCreate(dmaLoopbackTask, "dmaLoop", 0x200, NULL, configMAX_PRIORITIES - 1, &h2);
