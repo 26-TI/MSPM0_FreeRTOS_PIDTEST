@@ -117,22 +117,22 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 
 
 
-/* Defines for UART_DEBUG */
-#define UART_DEBUG_INST                                                    UART0
-#define UART_DEBUG_INST_FREQUENCY                                       40000000
-#define UART_DEBUG_INST_IRQHandler                              UART0_IRQHandler
-#define UART_DEBUG_INST_INT_IRQN                                  UART0_INT_IRQn
-#define GPIO_UART_DEBUG_RX_PORT                                            GPIOA
-#define GPIO_UART_DEBUG_TX_PORT                                            GPIOA
-#define GPIO_UART_DEBUG_RX_PIN                                    DL_GPIO_PIN_11
-#define GPIO_UART_DEBUG_TX_PIN                                    DL_GPIO_PIN_10
-#define GPIO_UART_DEBUG_IOMUX_RX                                 (IOMUX_PINCM22)
-#define GPIO_UART_DEBUG_IOMUX_TX                                 (IOMUX_PINCM21)
-#define GPIO_UART_DEBUG_IOMUX_RX_FUNC                  IOMUX_PINCM22_PF_UART0_RX
-#define GPIO_UART_DEBUG_IOMUX_TX_FUNC                  IOMUX_PINCM21_PF_UART0_TX
-#define UART_DEBUG_BAUD_RATE                                            (115200)
-#define UART_DEBUG_IBRD_40_MHZ_115200_BAUD                                  (21)
-#define UART_DEBUG_FBRD_40_MHZ_115200_BAUD                                  (45)
+/* Defines for UART0 */
+#define UART0_INST                                                         UART0
+#define UART0_INST_FREQUENCY                                            40000000
+#define UART0_INST_IRQHandler                                   UART0_IRQHandler
+#define UART0_INST_INT_IRQN                                       UART0_INT_IRQn
+#define GPIO_UART0_RX_PORT                                                 GPIOA
+#define GPIO_UART0_TX_PORT                                                 GPIOA
+#define GPIO_UART0_RX_PIN                                         DL_GPIO_PIN_11
+#define GPIO_UART0_TX_PIN                                         DL_GPIO_PIN_10
+#define GPIO_UART0_IOMUX_RX                                      (IOMUX_PINCM22)
+#define GPIO_UART0_IOMUX_TX                                      (IOMUX_PINCM21)
+#define GPIO_UART0_IOMUX_RX_FUNC                       IOMUX_PINCM22_PF_UART0_RX
+#define GPIO_UART0_IOMUX_TX_FUNC                       IOMUX_PINCM21_PF_UART0_TX
+#define UART0_BAUD_RATE                                                 (115200)
+#define UART0_IBRD_40_MHZ_115200_BAUD                                       (21)
+#define UART0_FBRD_40_MHZ_115200_BAUD                                       (45)
 
 
 
@@ -151,6 +151,14 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 #define GPIO_SPI_LCD_IOMUX_SCLK                                 (IOMUX_PINCM26)
 #define GPIO_SPI_LCD_IOMUX_SCLK_FUNC                 IOMUX_PINCM26_PF_SPI1_SCLK
 
+
+
+/* Defines for DMA_CH1 */
+#define DMA_CH1_CHAN_ID                                                      (1)
+#define UART0_INST_DMA_TRIGGER_0                             (DMA_UART0_RX_TRIG)
+/* Defines for DMA_CH0 */
+#define DMA_CH0_CHAN_ID                                                      (0)
+#define UART0_INST_DMA_TRIGGER_1                             (DMA_UART0_TX_TRIG)
 
 
 /* Port definition for Pin Group DEBUG_LED */
@@ -215,8 +223,9 @@ void SYSCFG_DL_SYSCTL_init(void);
 bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 void SYSCFG_DL_PWM_MOTOR_init(void);
 void SYSCFG_DL_TIMER_TICK_init(void);
-void SYSCFG_DL_UART_DEBUG_init(void);
+void SYSCFG_DL_UART0_init(void);
 void SYSCFG_DL_SPI_LCD_init(void);
+void SYSCFG_DL_DMA_init(void);
 
 
 bool SYSCFG_DL_saveConfiguration(void);

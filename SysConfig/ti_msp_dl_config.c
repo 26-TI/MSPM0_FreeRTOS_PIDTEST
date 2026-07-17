@@ -56,8 +56,9 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     SYSCFG_DL_SYSCTL_init();
     SYSCFG_DL_PWM_MOTOR_init();
     SYSCFG_DL_TIMER_TICK_init();
-    SYSCFG_DL_UART_DEBUG_init();
+    SYSCFG_DL_UART0_init();
     SYSCFG_DL_SPI_LCD_init();
+    SYSCFG_DL_DMA_init();
     /* Ensure backup structures have no valid state */
 	gPWM_MOTORBackup.backupRdy 	= false;
 	gTIMER_TICKBackup.backupRdy 	= false;
@@ -98,15 +99,17 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_reset(GPIOB);
     DL_TimerG_reset(PWM_MOTOR_INST);
     DL_TimerA_reset(TIMER_TICK_INST);
-    DL_UART_Main_reset(UART_DEBUG_INST);
+    DL_UART_Main_reset(UART0_INST);
     DL_SPI_reset(SPI_LCD_INST);
+
 
     DL_GPIO_enablePower(GPIOA);
     DL_GPIO_enablePower(GPIOB);
     DL_TimerG_enablePower(PWM_MOTOR_INST);
     DL_TimerA_enablePower(TIMER_TICK_INST);
-    DL_UART_Main_enablePower(UART_DEBUG_INST);
+    DL_UART_Main_enablePower(UART0_INST);
     DL_SPI_enablePower(SPI_LCD_INST);
+
     delay_cycles(POWER_STARTUP_DELAY);
 }
 
@@ -122,9 +125,9 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
     DL_GPIO_enableOutput(GPIO_PWM_MOTOR_C1_PORT, GPIO_PWM_MOTOR_C1_PIN);
 
     DL_GPIO_initPeripheralOutputFunction(
-        GPIO_UART_DEBUG_IOMUX_TX, GPIO_UART_DEBUG_IOMUX_TX_FUNC);
+        GPIO_UART0_IOMUX_TX, GPIO_UART0_IOMUX_TX_FUNC);
     DL_GPIO_initPeripheralInputFunction(
-        GPIO_UART_DEBUG_IOMUX_RX, GPIO_UART_DEBUG_IOMUX_RX_FUNC);
+        GPIO_UART0_IOMUX_RX, GPIO_UART0_IOMUX_RX_FUNC);
 
     DL_GPIO_initPeripheralOutputFunction(
         GPIO_SPI_LCD_IOMUX_SCLK, GPIO_SPI_LCD_IOMUX_SCLK_FUNC);
@@ -293,6 +296,10 @@ SYSCONFIG_WEAK void SYSCFG_DL_SYSCTL_init(void)
         while ((DL_SYSCTL_getClockStatus() & SYSCTL_CLKSTATUS_SYSPLLGOOD_MASK) != DL_SYSCTL_CLK_STATUS_SYSPLL_GOOD){}
     }
     DL_SYSCTL_setULPCLKDivider(DL_SYSCTL_ULPCLK_DIV_2);
+    DL_SYSCTL_setHFCLKDividerForMFPCLK(DL_SYSCTL_HFCLK_MFPCLK_DIVIDER_10);
+    DL_SYSCTL_enableMFCLK();
+    DL_SYSCTL_enableMFPCLK();
+	DL_SYSCTL_setMFPCLKSource(DL_SYSCTL_MFPCLK_SOURCE_HFCLK);
     DL_SYSCTL_setMCLKSource(SYSOSC, HSCLK, DL_SYSCTL_HSCLK_SOURCE_SYSPLL);
     /* INT_GROUP1 Priority */
     NVIC_SetPriority(GPIOB_INT_IRQn, 0);
@@ -393,12 +400,12 @@ SYSCONFIG_WEAK void SYSCFG_DL_TIMER_TICK_init(void) {
 }
 
 
-static const DL_UART_Main_ClockConfig gUART_DEBUGClockConfig = {
+static const DL_UART_Main_ClockConfig gUART0ClockConfig = {
     .clockSel    = DL_UART_MAIN_CLOCK_BUSCLK,
     .divideRatio = DL_UART_MAIN_CLOCK_DIVIDE_RATIO_1
 };
 
-static const DL_UART_Main_Config gUART_DEBUGConfig = {
+static const DL_UART_Main_Config gUART0Config = {
     .mode        = DL_UART_MAIN_MODE_NORMAL,
     .direction   = DL_UART_MAIN_DIRECTION_TX_RX,
     .flowControl = DL_UART_MAIN_FLOW_CONTROL_NONE,
@@ -407,28 +414,33 @@ static const DL_UART_Main_Config gUART_DEBUGConfig = {
     .stopBits    = DL_UART_MAIN_STOP_BITS_ONE
 };
 
-SYSCONFIG_WEAK void SYSCFG_DL_UART_DEBUG_init(void)
+SYSCONFIG_WEAK void SYSCFG_DL_UART0_init(void)
 {
-    DL_UART_Main_setClockConfig(UART_DEBUG_INST, (DL_UART_Main_ClockConfig *) &gUART_DEBUGClockConfig);
+    DL_UART_Main_setClockConfig(UART0_INST, (DL_UART_Main_ClockConfig *) &gUART0ClockConfig);
 
-    DL_UART_Main_init(UART_DEBUG_INST, (DL_UART_Main_Config *) &gUART_DEBUGConfig);
+    DL_UART_Main_init(UART0_INST, (DL_UART_Main_Config *) &gUART0Config);
     /*
      * Configure baud rate by setting oversampling and baud rate divisors.
      *  Target baud rate: 115200
      *  Actual baud rate: 115190.78
      */
-    DL_UART_Main_setOversampling(UART_DEBUG_INST, DL_UART_OVERSAMPLING_RATE_16X);
-    DL_UART_Main_setBaudRateDivisor(UART_DEBUG_INST, UART_DEBUG_IBRD_40_MHZ_115200_BAUD, UART_DEBUG_FBRD_40_MHZ_115200_BAUD);
+    DL_UART_Main_setOversampling(UART0_INST, DL_UART_OVERSAMPLING_RATE_16X);
+    DL_UART_Main_setBaudRateDivisor(UART0_INST, UART0_IBRD_40_MHZ_115200_BAUD, UART0_FBRD_40_MHZ_115200_BAUD);
 
 
     /* Configure Interrupts */
-    DL_UART_Main_enableInterrupt(UART_DEBUG_INST,
-                                 DL_UART_MAIN_INTERRUPT_RX);
+    DL_UART_Main_enableInterrupt(UART0_INST,
+                                 DL_UART_MAIN_INTERRUPT_DMA_DONE_RX |
+                                 DL_UART_MAIN_INTERRUPT_DMA_DONE_TX);
     /* Setting the Interrupt Priority */
-    NVIC_SetPriority(UART_DEBUG_INST_INT_IRQN, 3);
+    NVIC_SetPriority(UART0_INST_INT_IRQN, 3);
 
+    /* Configure DMA Receive Event */
+    DL_UART_Main_enableDMAReceiveEvent(UART0_INST, DL_UART_DMA_INTERRUPT_RX);
+    /* Configure DMA Transmit Event */
+    DL_UART_Main_enableDMATransmitEvent(UART0_INST);
 
-    DL_UART_Main_enable(UART_DEBUG_INST);
+    DL_UART_Main_enable(UART0_INST);
 }
 
 static const DL_SPI_Config gSPI_LCD_config = {
@@ -462,4 +474,40 @@ SYSCONFIG_WEAK void SYSCFG_DL_SPI_LCD_init(void) {
     /* Enable module */
     DL_SPI_enable(SPI_LCD_INST);
 }
+
+static const DL_DMA_Config gDMA_CH1Config = {
+    .transferMode   = DL_DMA_SINGLE_TRANSFER_MODE,
+    .extendedMode   = DL_DMA_NORMAL_MODE,
+    .destIncrement  = DL_DMA_ADDR_INCREMENT,
+    .srcIncrement   = DL_DMA_ADDR_UNCHANGED,
+    .destWidth      = DL_DMA_WIDTH_BYTE,
+    .srcWidth       = DL_DMA_WIDTH_BYTE,
+    .trigger        = UART0_INST_DMA_TRIGGER_0,
+    .triggerType    = DL_DMA_TRIGGER_TYPE_EXTERNAL,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_DMA_CH1_init(void)
+{
+    DL_DMA_initChannel(DMA, DMA_CH1_CHAN_ID , (DL_DMA_Config *) &gDMA_CH1Config);
+}
+static const DL_DMA_Config gDMA_CH0Config = {
+    .transferMode   = DL_DMA_SINGLE_TRANSFER_MODE,
+    .extendedMode   = DL_DMA_NORMAL_MODE,
+    .destIncrement  = DL_DMA_ADDR_UNCHANGED,
+    .srcIncrement   = DL_DMA_ADDR_INCREMENT,
+    .destWidth      = DL_DMA_WIDTH_BYTE,
+    .srcWidth       = DL_DMA_WIDTH_BYTE,
+    .trigger        = UART0_INST_DMA_TRIGGER_1,
+    .triggerType    = DL_DMA_TRIGGER_TYPE_EXTERNAL,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_DMA_CH0_init(void)
+{
+    DL_DMA_initChannel(DMA, DMA_CH0_CHAN_ID , (DL_DMA_Config *) &gDMA_CH0Config);
+}
+SYSCONFIG_WEAK void SYSCFG_DL_DMA_init(void){
+    SYSCFG_DL_DMA_CH1_init();
+    SYSCFG_DL_DMA_CH0_init();
+}
+
 
