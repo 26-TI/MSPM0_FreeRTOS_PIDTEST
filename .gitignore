@@ -1,22 +1,24 @@
-# Prerequisites
-*.d
+# =============================================
+#  MSPM0 FreeRTOS Project - .gitignore
+# =============================================
 
-# Object files
+# --- 编译中间文件 ---
+*.d
 *.o
 *.ko
 *.obj
 *.elf
 
-# Linker output
+# --- 链接输出 ---
 *.ilk
 *.map
 *.exp
 
-# Precompiled Headers
+# --- 预编译头 ---
 *.gch
 *.pch
 
-# Libraries
+# --- 静态库/动态库 ---
 *.lib
 *.a
 *.la
@@ -28,7 +30,7 @@
 *.so.*
 *.dylib
 
-# Executables
+# --- 可执行文件 ---
 *.exe
 *.out
 *.app
@@ -36,13 +38,13 @@
 *.x86_64
 *.hex
 
-# Debug files
+# --- 调试文件 ---
 *.dSYM/
 *.su
 *.idb
 *.pdb
 
-# Kernel Module Compile Results
+# --- 内核模块编译产物 ---
 *.mod*
 *.cmd
 .tmp_versions/
@@ -51,7 +53,16 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# --- CMake 构建输出 ---
 build/
 .cache/
 
+# --- 配置文件备份 ---
+CMakePresets.json.txt
+mspm0g350x_base.cmake.txt
+
 example/
+
+mspm0g350x_base.cmake
+Flash/
+CMakePresets.json
